@@ -2,7 +2,7 @@
 /**
 * initialise and compute recommendations from user profile for all user
 * fetch existing recommendation for current user
-* @return product recommendation
+* @ return product recommendation
 */
 class ContentBasedInit {
   //admin runs recommender engine for all users

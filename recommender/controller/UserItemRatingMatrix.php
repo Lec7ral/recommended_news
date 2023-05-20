@@ -1,7 +1,7 @@
 <?php
 /**
  * Computes user rating matrix, normalisedMeanRatingMatrix and average ratings for users
- *@return item rating matrix for current or all registered users
+ *@ return item rating matrix for current or all registered users
  */
 class UserItemRatingMatrix {
   //Compute rating matrix
