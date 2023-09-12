@@ -1,0 +1,221 @@
+<?php
+
+/**
+ * Implements hook_uninstall().
+ */
+function recommend_nodes_uninstall() {
+  // Clear recommendation data out of the cache.
+  \Drupal::cache('data')->deleteAll();
+}
+/**
+ * Implements hook_schema().
+ * Helper modules should use drupal_get_unprocessed_schema() to create tables for their own.
+ */
+function recommender_news_schema() {
+
+/*    $schema ['recommender_user_similarity'] = [
+    //table to save user similarity scores
+    'description' => 'This is the main table to save user similarity data.' ,
+      'fields' => [
+        'id'=> [
+          'description' => 'Unique index for each similarity pair' ,
+          'type' => 'serial' ,
+          'size' => 'normal' ,
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+        ],
+          'uid1' => [
+          'description' => 'The first user ID',
+          'type' => 'int',
+          'size' => 'normal',
+          'unsigned' => TRUE,
+        ],
+          'uid2' => [
+          'description' => 'The second user ID',
+          'type' => 'int',
+          'size' => 'normal',
+          'unsigned' => TRUE,
+        ],
+          'score' => [
+          'type' => 'float',
+          'size' => 'normal',
+          'not null' => FALSE,
+          'description' => 'Similarity score. The bigger, the more similar',
+        ],
+      ],
+      'primary key' => ['id'],
+      'foreign keys' => [
+        'user_rc' => [
+          'table' => 'users',
+          'columns' => [
+            'uid1' => 'uid',
+          ],
+        ],
+        'user2_rc' => [
+          'table' => 'users',
+          'columns' => [
+            'uid2' => 'uid',
+          ],
+        ],
+    ],
+  ]; */
+
+    // table to save prediction data
+/*     $schema['recommender_prediction'] = [
+      'description' => 'This is the main table to save prediction data.',
+      'fields' => [
+        'id' => [
+          'description' => 'Unique index for each prediction link',
+          'type' => 'serial',
+          'size' => 'normal',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+        ],
+        'uid' => [
+          'description' => 'User id',
+          'type' => 'int',
+          'size' => 'normal',
+          'unsigned' => TRUE,
+        ],
+        'newsid' => [
+          'description' => 'News ID',
+          'type' => 'int',
+          'size' => 'normal',
+          'unsigned' => TRUE,
+        ],
+        'score' => [
+          'type' => 'float',
+          'size' => 'normal',
+          'not null' => FALSE,
+          'description' => 'The prediction score. Higher score means the user prefers the item more.',
+        ],
+      ],
+      'primary key' => ['id'],
+      'foreign keys' => [
+        'user_rc' => [
+          'table' => 'users',
+          'columns' => [
+            'uid' => 'uid',
+          ],
+        ],
+        'news_rc' => [
+          'table' => 'news',
+          'columns' => [
+            'newsid' => 'id_news',
+          ],
+        ],
+      ],
+    ]; */
+    // table to save information about the news
+    $schema['news'] = [
+      'description' => 'This is the main table to save news.',
+      'fields' => [
+        'id_news' => [
+          'description' => 'Unique index for each news',
+          'type' => 'serial',
+          'size' => 'normal',
+          'not null' => TRUE,
+        ],
+        'title' => [
+          'description' => 'Title',
+          'type' => 'text',
+          'size' => 'normal',
+          'not null' => TRUE,
+        ],
+        'urlimage' => [
+          'description' => 'URL News Image',
+          'type' => 'text',
+          'size' => 'normal',
+          'not null' => TRUE,
+        ],
+        'url' => [
+          'description' => 'URL of the news.',
+          'type' => 'text',
+          'size' => 'normal',
+          'not null' => TRUE,
+        ],
+        'tags' => [
+          'description' => 'News tags',
+          'type' => 'text',
+          'size' => 'normal',
+          'not null' => TRUE,
+        ],
+        'date_added' => [
+          'description' => ' Time at which the news was added.',
+          'type' => 'int',
+          'size' => 'normal',
+          'not null' => TRUE,
+        ],
+      ],
+      'primary key' => ['id_news'],
+    ];
+    // table to save information about the news recommended
+    $schema['news_recomended'] = [
+      'description' => 'This is the main table to save news recommended.',
+      'fields' => [
+        'id_news_recommended' => [
+          'description' => 'Unique index for each news recommended.',
+          'type' => 'serial',
+          'size' => 'normal',
+          'not null' => TRUE,
+        ],
+        'id_news' => [
+          'description' => 'Unique index for each news',
+          'type' => 'text',
+          'size' => 'normal',
+        ],
+        'id_user' => [
+          'description' => 'Unique index for each user',
+          'type' => 'int',
+          'size' => 'normal',
+        ],
+        'date_recommedated' => [
+          'description' => ' Time at which the news was recommendated.',
+          'type' => 'int',
+          'size' => 'normal',
+        ],
+      ],
+      'primary key' => ['id_news_recommended'],
+      'foreign keys' => [
+        'user_rc' => [
+          'table' => 'users',
+          'columns' => [
+            'id_user' => 'id',
+          ],
+        ],
+        'news_rc' => [
+          'table' => 'news',
+          'columns' => [
+            'id_news' => 'id_news',
+          ],
+        ],
+      ],
+    ];
+    $schema['news_preferences'] = [
+      'description' => 'This is the main table to save news prefernces.',
+      'fields' => [
+        'id' => [
+          'description' => 'Unique index for each user news recommended.',
+          'type' => 'serial',
+          'size' => 'normal',
+          'not null' => TRUE,
+        ],
+        'preferences' => [
+          'description' => 'Unique index for each user',
+          'type' => 'text',
+          'size' => 'normal',
+        ],
+      ],
+      'primary key' => ['id'],
+      'foreign keys' => [
+        'user_rc' => [
+          'table' => 'users',
+          'columns' => [
+            'uid' => 'uid',
+          ],
+        ],
+    ]
+  ];
+
+  return $schema;
+}

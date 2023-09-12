@@ -1,5 +1,12 @@
-name: 'recommender_news'
+name: 'Recomendaciones'
 type: module
 description: 'Modulo para recomendar noticias en un sitio web'
-core_version_requirement: 9.x
+core_version_requirement: ^9 || ^10
 package: 'Recommended'
+libraries:
+  - simplepie/simplepie
+stylesheets:
+  all:
+    css/news.css: {}
+dependencies:
+  - migrate

@@ -1,0 +1,48 @@
+Para usar la librería SimplePie en un módulo de Drupal 9, sigue estos pasos:
+
+1. Instala la librería con Composer:
+
+```
+composer require simplepie/simplepie
+```
+
+Esto descargará la librería e incluirá el autoloader de Composer.
+
+2. Declara la dependencia de la librería en el archivo .info.yml del módulo:
+
+```
+name: MóduloSimplePie
+type: module
+core: 9.x
+package: Custom
+dependencies:
+  - drupal:jquery
+  - drupal:simplepie
+```
+
+3. Usa la librería en tu módulo conectándose al autoloader de Composer:
+
+```php
+require_once 'vendor/autoload.php';
+
+use SimplePie;
+
+$feed = new SimplePie();
+//... resto del código
+```
+
+4. Para renderizar algo del resultado de SimplePie en un template de Drupal, crea una función en tu módulo y llámala desde el template:
+
+`MóduloSimplePie.module`:
+```php
+function MóduloSimplePie_get_feed_title() {
+  $feed = new SimplePie();
+  //...
+  return $feed->get_title();
+}
+```
+
+`template.html.twig`:
+```twig
+{{ MóduloSimplePie_get_feed_title() }}
+```

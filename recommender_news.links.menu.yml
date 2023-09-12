@@ -1,0 +1,6 @@
+recommender_news.admin_settings_form:
+  title: 'Recommender News'
+  description: 'Recommender News'
+  parent: system.admin_config_services
+  route_name: recommender_news.admin_settings_form
+  weight: 100

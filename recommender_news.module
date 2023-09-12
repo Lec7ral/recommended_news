@@ -1,0 +1,285 @@
+<?php
+use Drupal;
+/**
+* Implements hook_theme().
+*/
+function recommender_news_theme($existing, $type, $theme, $path) {
+  return [
+  'recommender_news' => [
+  'variables' => ['items' => NULL],
+  'template' => 'recommender-news',
+  ],
+  ];
+  }
+
+
+function recommender_news(&$variables) {
+  $variables['#attached']['library'][] = 'news.css';
+  }
+
+class JaccardSimilarity{
+  // compute similarity
+  public static function getJaccardSimilarity($token1, $token2) : float{
+    $JC = self::computeJaccardSimilarity($token1, $token2);
+	  return $JC;
+ }
+
+ private static function computeJaccardSimilarity($token1, $token2) : float{
+  $currentToken = $token1;
+  $otherToken = $token2;
+  $currentTokensArr = preg_split('/[\s,]+/', $currentToken);
+  $otherTokensArr = preg_split('/[\s,]+/', $otherToken);
+  $intersection = array_intersect($otherTokensArr, $currentTokensArr ); //intersection
+  $union = array_unique(array_merge($currentTokensArr, $otherTokensArr )); //union
+  $noOfIntersection = count($intersection);
+  $noOfUnion = count($union);
+  $jaccard_sim_coefficient = $noOfIntersection / $noOfUnion; //
+  return $jaccard_sim_coefficient;
+ }
+}
+
+
+function recommender_news_user_login($account) {
+  //obtener vecindario de los usuarios.
+  $query = \Drupal::database()->select('news_preferences', 'np')
+  ->fields('np', array('preferences','id'))
+  ->join('users', 'u', 'u.uid = np.id')
+  ->condition('np.id',$account->id(),'!=');
+  $results = $query->execute()->fetchAll();
+
+  $query = \Drupal::database()->select('news_preferences', 'np')
+  ->addField('np', 'preferences')
+  ->condition('np.id',$account->id());
+  $user = $query->execute()->fetchAll();
+
+	$recommendedNews = [];
+	$similarities = [];
+
+	if (is_array($user)) {
+		$preferences = [];
+		foreach ($user as $obj) {
+			$preferences[] = $obj->preferences;
+		}
+		$user1 = implode(',', $preferences);
+	}
+	$preferences1 = [];
+  foreach ($results as $result) {
+		$preference = $result->preferences;
+		$uid2 = $result->id;
+/* 		if (is_array($preference)) {
+			$preferences1[] = implode(',', $preference);
+		} */
+
+
+		$similarity = JaccardSimilarity::getJaccardSimilarity($user1,$preference);
+		$similarities[$uid2] = $similarity;
+	}
+		arsort($similarities); // Ordenar el array de similitudes en orden descendente
+		$topSimilarities = array_slice($similarities, 0, 3, true); // Obtener los 10 valores más grandes
+		$userTopSimilarities = array_keys($topSimilarities);//aqui cojo los indices(userid)
+
+		foreach ($userTopSimilarities as $news) { //Obtener el listado de noticias que se ecomendaron a los usuarios en la vecindad.
+		$query = \Drupal::database()->select('news_recomended', 'nr')
+		->fields('nr', ['id_news'])
+		->condition('nr.id_news_recommended', $news);
+		$recommended = $query->execute()->fetchAll();
+		if (is_array($recommended)) {
+			$pref = [];
+			foreach ($recommended as $obj) {
+				$pref[] = $obj->id_news;
+			}
+			$recommendedNews[] = implode(',', $pref);
+		}
+	//	foreach ($recommended as $rec) {
+			//	 = explode(',',$rec);//estan las id noticias recomendadas a cada usuario
+	/* 		echo '<pre>';
+			print_r($items);
+			echo '</pre>'; */
+		}
+  //}
+  $topNews = array_count_values($recommendedNews);
+	arsort($topNews);
+	$topNews = array_slice($topNews, 0, 3, true);//obteniendo las id de 10 noticias top entre el vecindario.
+
+	  /*   foreach ($topSimilarities as $uid2 => $similarity) {
+    $query = \Drupal::database()->update('recommender_user_similarity');
+    $query->fields([
+        'score' => $similarity,
+    ]);
+    $query->condition('uid1', $account->id());
+    $query->condition('uid2', $uid2);
+    $query->execute();
+
+    } */
+
+
+
+//obtener noticias afines al usuario.
+	$query = \Drupal::database()->select('news', 'n')
+  ->fields('n', array('tags','id_news'));
+  $results = $query->execute()->fetchAll();
+
+  $query = \Drupal::database()->select('news_preferences', 'np')
+  ->addField('np', 'preferences')
+  ->condition('id',$account->id());
+  $user = $query->execute()->fetchAll();
+//	$uid2 = $user->uid;
+
+	$similarities1 = [];
+
+	if (is_array($user)) {
+		$preferences = [];
+		foreach ($user as $obj) {
+			$preferences[] = $obj->preferences;
+		}
+		$user = implode(',', $preferences);
+	}
+  foreach ($results as $result) {
+  	$uid1 = $result-> id_news;
+		$tags = $result-> tags;
+		/* if (is_array($tags)) {
+			$tags = implode(',', $tags);
+		} */
+  	$similarity = JaccardSimilarity::getJaccardSimilarity($user,$tags);
+		$similarities1[$uid1] = $similarity;
+	}
+	arsort($similarities1); // Ordenar el array de similitudes en orden descendente
+	$topSimilarities1 = array_slice($similarities1, 0, 3, true); // Obtener los 10 valores más grandes
+	$newsTopSimilarities = array_keys($topSimilarities1);//aqui cojo los indices(newsid)
+	$final = array_merge($newsTopSimilarities, $topNews);
+	$finalRecomendation = array_unique($final);
+	shuffle($finalRecomendation);
+
+//guardar las predicciones en la tabla de recomendacion para el usuario
+	//foreach ($finalRecomendation as $rec) {
+		$query = \Drupal::database()->upsert('news_recomended')
+			->fields([
+				'id_news' => implode(',', $finalRecomendation),
+				'id_news_recommended' => $account->id(),
+//				'date_recommedated' => \Drupal::time()->getRequestTime(),
+			])
+			->key('id_news_recommended')
+			->execute();
+	//}
+
+}
+
+
+
+
+
+//agregar el formulario de preferencias al menu de educion de perfil de usuario.
+function recommender_news_form_alter(&$form, &$form_state, $form_id) {
+		$uid = \Drupal::currentUser()->id();
+		// Obtiene los valores almacenados en la tabla news_preferences.
+		$connection = \Drupal::database();
+		$query = $connection->select('news_preferences', 'np')
+			->fields('np', ['preferences'])
+			->condition('id', $uid)
+			->execute();
+		$preferences = $query->fetchField();
+		if ($form_id == 'user_form') {
+			$form['preferences'] = [
+				'#type' => 'fieldset',
+				'#title' => t('Que temas le interesan?'),
+				'#collapsible' => TRUE,
+				'#collapsed' => TRUE,
+				'#weight' => 10,
+			  ];
+
+			  $categorias = ['política', 'deportes', 'tecnología', 'entretenimiento', 'ciencia'];
+			  foreach ($categorias as $categoria) {
+				$form['preferences'][$categoria] = [
+				  '#type' => 'checkbox',
+				  '#title' => ucfirst(t($categoria)),
+					'#default_value' => in_array($categoria, explode(',', $preferences)),
+				];
+			  }
+			$form['actions']['submit']['#submit'][] = 'recommender_news_form_submit';
+		}
+		if ($form_id == 'user_register_form') {
+			$form['preferences'] = [
+				'#type' => 'fieldset',
+				'#title' => t('Que temas le interesan?'),
+				'#collapsible' => TRUE,
+				'#collapsed' => TRUE,
+				'#weight' => 10,
+			  ];
+
+			  $categorias = ['política', 'deportes', 'tecnología', 'entretenimiento', 'ciencia'];
+			  foreach ($categorias as $categoria) {
+				$form['preferences'][$categoria] = [
+				  '#type' => 'checkbox',
+				  '#title' => ucfirst(t($categoria)),
+				];
+			  }
+			$form['actions']['submit']['#submit'][] = 'recommender_news_form_submit';
+		}
+}
+function recommender_news_form_submit(&$form, &$form_state) {
+		// Obtiene el ID de usuario actual.
+		$uid = \Drupal::currentUser()->id();
+		// Guarda los valores en la tabla news_preferences.
+		$connection = \Drupal::database();
+		$categorias = ['política', 'deportes', 'tecnología', 'entretenimiento', 'ciencia'];
+
+		foreach ($categorias as $categoria) {
+		  if ($form_state->getValue($categoria)) {
+				$userPrefernce[] = $categoria;
+			}}
+		$query = $connection->upsert('news_preferences');
+		$query-> fields([
+			'preferences' => implode(',' ,$userPrefernce),
+			'id' => $uid,
+		]);
+
+	  $query->key('id');
+		$query->execute();
+
+}
+
+/**
+* Implements hook_cron().
+*/
+/* function recommender_news_cron() {
+	$query = \Drupal::database()->delete('news_recomended');
+	$query->condition('date_recommedated',\Drupal::time()->getRequestTime()-6 , '<')
+	->execute();
+	} */
+
+
+/* require_once 'vendor/autoload.php';
+
+use SimplePie;
+  // Carga la librería SimplePie
+function cargarlibreria() {
+  $config = \Drupal::config('recommender_news.settings');
+  $rss_url= $config->get('rss_url');
+  // Crea una instancia de SimplePie
+  $feed = new SimplePie();
+  $feed->set_feed_url($rss_url);
+  $feed->init();
+
+  // Recorre los elementos del feed RSS
+  foreach ($feed->get_items() as $item) {
+    // Obtiene los datos que te interesan
+    $titulo = $item->get_title();
+    $url = $item->get_permalink();
+    $imagen = $item->get_enclosure()->get_link(); // Si la imagen está en el elemento enclosure
+    $tags = $item->get_categories(); // Si los tags están en el elemento categories
+
+    // Guarda los datos en la tabla personalizada utilizando la API de Drupal
+    db_insert('news')
+      ->fields(array(
+        'title' => $titulo,
+        'url' => $url,
+        'urlimagen' => $imagen,
+        'tags' => $tags,
+      ))
+      ->execute();
+  }
+}
+ */
+
+
+

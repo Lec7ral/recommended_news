@@ -1,0 +1,22 @@
+id: news
+label: Importar noticias desde CSV
+migration_group: default
+source:
+  plugin: csv
+  path: path/to/your/csv/file.csv/////////////////////////////
+  header_row_count: 1
+  keys:
+    - id
+destination:
+  plugin: 'custom_table'
+process:
+  id: id
+  title: title
+  url: url
+  urlimagen:
+    plugin: default_value
+    default_value: ''
+  tags:
+    plugin: explode
+    delimiter: ','
+    source: tags

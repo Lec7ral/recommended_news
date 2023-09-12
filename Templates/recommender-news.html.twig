@@ -1,0 +1,22 @@
+{{ attach_library('recommender_news/news') }}
+
+{% if items is empty %}
+  <h3>No hay noticias para mostrar</h3>
+{% else %}
+  <div class="recommender-news-footer-block">
+    <h3>Noticias recomendadas</h3>
+    <ul class="list">
+      {% for item in items %}
+        <li>
+          <a href="{{ item.url }}" class="news-link" target= "blank">
+            <img src="{{ item.urlimage }}" class="news-image">
+            <div class="news-data">
+              <h4>{{ item.title }}</h4>
+            </div>
+          </a>
+        </li>
+      {% endfor %}
+    </ul>
+  </div>
+
+{% endif %}
